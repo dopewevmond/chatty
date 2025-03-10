@@ -1,4 +1,9 @@
-import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import {
+  createAsyncThunk,
+  createSlice,
+  isAnyOf,
+  PayloadAction,
+} from "@reduxjs/toolkit";
 import type { Socket } from "socket.io-client";
 import { RootStateType } from "./store";
 import axios from "axios";
@@ -31,6 +36,7 @@ type ChatSlice = {
     displayName: string;
   } | null;
   isLoadingSearch: boolean;
+  isSendingMessage: boolean;
   searchResults:
     | {
         _id: string;
@@ -41,6 +47,8 @@ type ChatSlice = {
   recents: Map<
     string,
     {
+      otherUserDisplayName: string;
+      otherUserUserName: string;
       message: string;
       senderId: string;
       recipientId: string;
@@ -57,6 +65,7 @@ const initialState: ChatSlice = {
   chats: {},
   open: null,
   isLoadingSearch: false,
+  isSendingMessage: false,
   searchResults: null,
   recents: new Map(),
 };
@@ -103,25 +112,71 @@ export const chatSlice = createSlice({
       .addCase(searchUser.pending, (state) => {
         state.isLoadingSearch = true;
       })
+      .addCase(sendMessage.pending, (state) => {
+        state.isSendingMessage = true;
+      })
       .addCase(searchUser.rejected, (state) => {
         state.isLoadingSearch = false;
       })
-      .addCase(
-        searchUser.fulfilled,
+      .addCase(sendMessage.rejected, (state) => {
+        state.isSendingMessage = false;
+      })
+      .addCase(searchUser.fulfilled, (state, { payload }) => {
+        state.isLoadingSearch = false;
+        state.searchResults = [...payload];
+      })
+      .addCase(sendMessage.fulfilled, (state, { payload }) => {
+        state.isSendingMessage = false;
+        // add optimistically
+      })
+      .addMatcher(
+        isAnyOf(getRecentChats.fulfilled),
         (
           state,
           {
             payload,
           }: PayloadAction<
             {
-              _id: string;
-              username: string;
-              displayName: string;
+              otherUserDetails: {
+                _id: string;
+                username: string;
+                displayName: string;
+              };
+              messages: {
+                _id: string;
+                senderId: string;
+                recipientId: string;
+                message: string;
+                timestamp: string;
+              }[];
             }[]
           >
         ) => {
-          state.isLoadingSearch = false;
-          state.searchResults = [...payload];
+          for (let i = payload.length - 1; i >= 0; i--) {
+            if (state.recents.has(payload[i].otherUserDetails._id)) {
+              state.recents.delete(payload[i].otherUserDetails._id);
+            }
+            state.recents.set(payload[i].otherUserDetails._id, {
+              ...payload[i].messages[0],
+              otherUserDisplayName: payload[i].otherUserDetails.displayName,
+              otherUserUserName: payload[i].otherUserDetails.username
+            });
+
+            if (state.chats.hasOwnProperty(payload[i].otherUserDetails._id)) {
+              state.chats[payload[i].otherUserDetails._id].messages.concat(
+                [...payload[i].messages].reverse()
+              );
+            } else {
+              state.chats[payload[i].otherUserDetails._id] = {
+                details: {
+                  _id: payload[i].otherUserDetails._id,
+                  username: payload[i].otherUserDetails.username,
+                  displayName: payload[i].otherUserDetails.displayName,
+                },
+                messages: [...payload[i].messages].reverse(),
+              };
+            }
+          }
         }
       );
   },
@@ -130,7 +185,34 @@ export const chatSlice = createSlice({
 export const searchUser = createAsyncThunk(
   `${chatSlice.name}/search-user`,
   async (query: string) => {
-    const { data } = await axios.post("/api/user/search", { query });
+    const { data } = await axios.post<
+      {
+        _id: string;
+        username: string;
+        displayName: string;
+      }[]
+    >("/api/user/search", { query });
+    return data;
+  }
+);
+
+type SendMessageType = {
+  recipientId: string;
+  message: string;
+};
+
+export const sendMessage = createAsyncThunk(
+  `${chatSlice.name}/send-message`,
+  async (payload: SendMessageType) => {
+    const { data } = await axios.post("/api/chat", payload);
+    return data;
+  }
+);
+
+export const getRecentChats = createAsyncThunk(
+  `${chatSlice.name}/get-recent-messages`,
+  async () => {
+    const { data } = await axios.get("/api/chat");
     return data;
   }
 );

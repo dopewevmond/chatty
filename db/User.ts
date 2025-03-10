@@ -10,10 +10,10 @@ export const createUser = async (
   displayName: string
 ) => {
   return db.collection("user").insertOne({
-    _id: new ObjectId(),
+    _id: new ObjectId().toString() as unknown as ObjectId,
     username,
     displayName,
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(),
   });
 };
 
@@ -39,8 +39,8 @@ export const searchUserByUsernameDisplayNameOrId = async (
       .find({
         $and: [
           { $or: conditions },
-          { _id: { $ne: new ObjectId(excludeUserId) } }
-        ]
+          { _id: { $ne: new ObjectId(excludeUserId) } },
+        ],
       })
       .toArray();
   }
@@ -48,7 +48,7 @@ export const searchUserByUsernameDisplayNameOrId = async (
   return db
     .collection("user")
     .find({
-      $or: conditions
+      $or: conditions,
     })
     .toArray();
 };

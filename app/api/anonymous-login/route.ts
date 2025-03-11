@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectToDB } from "@/db";
-import { createUser, findUser } from "@/db/User";
+import { createUser, findUserByUsername } from "@/db/User";
 import { cookies } from "next/headers";
 import {
   uniqueNamesGenerator,
@@ -9,22 +9,17 @@ import {
 } from "unique-names-generator";
 import * as jwt from "jsonwebtoken";
 import { Server } from "socket.io";
+import { TokenPayloadType } from "@/lib/types";
 
 declare global {
   // eslint-disable-next-line no-var
-  var io: Server | undefined
+  var io: Server | undefined;
 }
 
 export async function POST() {
   try {
     const cookieStore = await cookies();
     const tokenValue = cookieStore.get("token")?.value;
-
-    if (!global.io) {
-      console.log("socket not initialized");
-    } else {
-      console.log("socket accessible!")
-    }
 
     if (tokenValue != null) {
       try {
@@ -44,7 +39,7 @@ export async function POST() {
     const username = cookieStore.get("username")?.value;
     const { db } = await connectToDB();
 
-    let user = await findUser(db, username ?? "");
+    let user = await findUserByUsername(db, username ?? "");
     if (user == null) {
       const generatedUserName = uniqueNamesGenerator({
         dictionaries: [adjectives, animals],
@@ -56,10 +51,16 @@ export async function POST() {
         generatedUserName,
         generatedUserName.replace("_", " ")
       );
-      user = await findUser(db, generatedUserName);
+      user = await findUserByUsername(db, generatedUserName);
     }
 
-    const tokenPayload = { id: user?._id.toString(), username: user?.username };
+    if (user == null) throw new Error("An error occurred while logging you in");
+
+    const tokenPayload = {
+      id: user?._id.toString(),
+      username: user?.username,
+      displayName: user?.displayName,
+    } as TokenPayloadType;
 
     const expires = Date.now() + Number(3600 * 24 * 7) * 1000;
 
@@ -83,7 +84,7 @@ export async function POST() {
       expires,
     });
 
-    return Response.json({});
+    return Response.json(user);
   } catch (e) {
     if (process.env.NODE_ENV === "development") console.log(e);
     return NextResponse.json(

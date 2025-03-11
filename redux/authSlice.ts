@@ -4,6 +4,7 @@ import axios from "axios";
 type AuthSlice = {
   id: string | null;
   username: string | null;
+  displayName: string | null;
   isLoggedIn: boolean;
   errorMessage: string | null;
 };
@@ -11,6 +12,7 @@ type AuthSlice = {
 const initialState: AuthSlice = {
   id: null,
   username: null,
+  displayName: null,
   isLoggedIn: false,
   errorMessage: null,
 };
@@ -25,10 +27,17 @@ const authSlice = createSlice({
         anonymousLogin.fulfilled,
         (
           state,
-          { payload }: PayloadAction<{ id: string; username: string }>
+          {
+            payload,
+          }: PayloadAction<{
+            id: string;
+            username: string;
+            displayName: string;
+          }>
         ) => {
           state.id = payload.id;
           state.username = payload.username;
+          state.displayName = payload.displayName;
           state.isLoggedIn = true;
         }
       )

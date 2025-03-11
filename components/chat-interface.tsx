@@ -38,13 +38,6 @@ import {
 import { io } from "socket.io-client";
 import { cn } from "@/lib/utils";
 import { useDebounceCallback } from "usehooks-ts";
-import axios from "axios";
-
-interface ChatMessage {
-  id: string;
-  username: string;
-  message: string;
-}
 
 export default function ChattyApp() {
   const dispatch = useAppDispatch();
@@ -65,7 +58,7 @@ export default function ChattyApp() {
 
   useEffect(() => {
     dispatch(getRecentChats());
-  }, []);
+  }, [dispatch]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -110,21 +103,6 @@ export default function ChattyApp() {
       console.log("finished removing event listeners");
     };
   }, [dispatch, isLoggedIn, hasInitializedSocket, socket]);
-
-  const messages: ChatMessage[] = [
-    { id: "1", username: "wevs1234", message: "here" },
-    { id: "2", username: "storedwailing", message: "this is another message" },
-    { id: "3", username: "wevmond", message: "another message" },
-    { id: "4", username: "wevmond", message: "another message" },
-    { id: "5", username: "wevmond", message: "another message" },
-    { id: "6", username: "wevmond", message: "another message" },
-    { id: "7", username: "wevmond", message: "another message" },
-    { id: "8", username: "wevmond", message: "another message" },
-    { id: "9", username: "wevmond", message: "another message" },
-    { id: "10", username: "wevmond", message: "another message" },
-    { id: "11", username: "wevmond", message: "another message" },
-    { id: "12", username: "roller", message: "last message" },
-  ];
 
   return (
     <div className="h-screen flex flex-col">
@@ -229,7 +207,7 @@ export default function ChattyApp() {
             </div>
           ) : (
             <ScrollArea className="flex-1 h-full overflow-y-auto">
-              {Array.from(recents.entries())
+              {Object.entries(recents)
                 .toSorted(
                   (a, b) =>
                     new Date(b[1].timestamp).getTime() -

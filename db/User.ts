@@ -1,3 +1,4 @@
+import { UserType } from "@/lib/types";
 import { ObjectId, type Db } from "mongodb";
 
 export const createUserCollection = async (db: Db) => {
@@ -13,12 +14,16 @@ export const createUser = async (
     _id: new ObjectId().toString() as unknown as ObjectId,
     username,
     displayName,
-    createdAt: new Date(),
+    createdAt: new Date().toISOString(),
   });
 };
 
-export const findUser = async (db: Db, username: string) => {
-  return db.collection("user").findOne({ username });
+export const findUserByUsername = async (db: Db, username: string) => {
+  return db.collection("user").findOne<UserType>({ username });
+};
+
+export const findUserById = async (db: Db, _id: ObjectId) => {
+  return db.collection("user").findOne<UserType>({ _id });
 };
 
 export const searchUserByUsernameDisplayNameOrId = async (

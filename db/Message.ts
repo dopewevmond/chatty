@@ -49,7 +49,7 @@ export const getRecentChatsGroupedByUser = async (db: Db, userId: string) => {
         $project: {
           _id: 0,
           otherUserId: "$_id.otherUserId",
-          messages: { $slice: ["$messages", 3] },
+          messages: { $slice: ["$messages", 100] },
         },
       },
       {

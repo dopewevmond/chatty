@@ -142,9 +142,13 @@ export const chatSlice = createSlice({
       } else {
         state.chats[otherUserId] = {
           details: {
-            _id: senderId,
-            displayName: senderDisplayName,
-            username: senderUserName,
+            _id: otherUserId,
+            displayName:
+              payload.type === "send"
+                ? recipientDisplayName
+                : senderDisplayName,
+            username:
+              payload.type === "send" ? recipientUserName : senderUserName,
           },
           messages: [{ ...messageDetails, recipientId, senderId }],
         };

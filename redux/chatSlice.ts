@@ -167,28 +167,31 @@ export const chatSlice = createSlice({
         state.isLoadingSearch = false;
         state.searchResults = [...payload];
       })
-      .addMatcher(isAnyOf(getRecentChats.fulfilled), (state, { payload }) => {
-        payload.forEach((chat) => {
-          state.recents[chat.otherUserDetails._id] = {
-            ...chat.messages[0],
-            otherUserDisplayName: chat.otherUserDetails.displayName,
-            otherUserUserName: chat.otherUserDetails.username,
-          };
-
-          if (state.chats.hasOwnProperty(chat.otherUserDetails._id)) {
-            state.chats[chat.otherUserDetails._id].messages.push(
-              ...chat.messages.reverse()
-            );
-          } else {
-            state.chats[chat.otherUserDetails._id] = {
-              details: {
-                ...chat.otherUserDetails,
-              },
-              messages: [...chat.messages].reverse(),
+      .addMatcher(
+        isAnyOf(getRecentChats.fulfilled, getChatsWhileOffline.fulfilled),
+        (state, { payload }) => {
+          payload.forEach((chat) => {
+            state.recents[chat.otherUserDetails._id] = {
+              ...chat.messages[0],
+              otherUserDisplayName: chat.otherUserDetails.displayName,
+              otherUserUserName: chat.otherUserDetails.username,
             };
-          }
-        });
-      });
+
+            if (state.chats.hasOwnProperty(chat.otherUserDetails._id)) {
+              state.chats[chat.otherUserDetails._id].messages.push(
+                ...chat.messages.reverse()
+              );
+            } else {
+              state.chats[chat.otherUserDetails._id] = {
+                details: {
+                  ...chat.otherUserDetails,
+                },
+                messages: [...chat.messages].reverse(),
+              };
+            }
+          });
+        }
+      );
   },
 });
 
@@ -238,6 +241,21 @@ export const getRecentChats = createAsyncThunk(
   `${chatSlice.name}/get-recent-messages`,
   async () => {
     const { data } = await axios.get<GetRecentChatsType>("/api/chat");
+    return data;
+  }
+);
+
+type GetOfflineChatRequestQueryType = {
+  timestamp: string;
+};
+export const getChatsWhileOffline = createAsyncThunk(
+  `${chatSlice.name}/get-offline-messages`,
+  async (payload: GetOfflineChatRequestQueryType) => {
+    const params = new URLSearchParams();
+    params.set("timestamp", payload.timestamp);
+    const { data } = await axios.get<GetRecentChatsType>(
+      `/api/chat/offline?${params.toString()}`
+    );
     return data;
   }
 );

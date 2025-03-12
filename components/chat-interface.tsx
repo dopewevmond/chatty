@@ -20,6 +20,7 @@ import {
   closeSearch,
   connectError,
   connectSocketSuccessfully,
+  getChatsWhileOffline,
   getRecentChats,
   handleNewMessage,
   initializeSocket,
@@ -50,10 +51,6 @@ export default function ChattyApp() {
   const recents = useAppSelector((state) => state.chat.recents);
 
   useEffect(() => {
-    dispatch(getRecentChats());
-  }, [dispatch]);
-
-  useEffect(() => {
     if (!isLoggedIn) {
       dispatch(anonymousLogin());
       return;
@@ -67,12 +64,26 @@ export default function ChattyApp() {
     socket.on("connect", () => {
       console.log("socket connected successfully");
       dispatch(connectSocketSuccessfully());
+
+      const recentEntries = Object.entries(recents).toSorted(
+        (a, b) =>
+          new Date(b[1].timestamp).getTime() -
+          new Date(a[1].timestamp).getTime()
+      );
+
+      console.log(recentEntries?.[0]?.[1]?.timestamp);
+
+      if (recentEntries?.length === 0) {
+        dispatch(getRecentChats());
+      } else {
+        dispatch(
+          getChatsWhileOffline({ timestamp: recentEntries[0][1].timestamp })
+        );
+      }
     });
 
     socket.io.on("reconnect", () => {
-      // refetch messages since last offset if there are any messages
-      // if there aren't any messages refetch all messages
-      console.log("socket reconnected successfully");
+      console.log('reconnected');
     });
 
     socket.on("connect_error", (err) => {
@@ -94,7 +105,7 @@ export default function ChattyApp() {
       socket.removeAllListeners();
       console.log("finished removing event listeners");
     };
-  }, [dispatch, isLoggedIn, hasInitializedSocket, socket]);
+  }, [dispatch, isLoggedIn, hasInitializedSocket, socket, recents]);
 
   return (
     <div className="h-screen flex flex-col">

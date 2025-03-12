@@ -31,6 +31,7 @@ import {
   connectError,
   connectSocketSuccessfully,
   getRecentChats,
+  handleNewMessage,
   initializeSocket,
   openChat,
   searchUser,
@@ -38,6 +39,7 @@ import {
 import { io } from "socket.io-client";
 import { cn } from "@/lib/utils";
 import { useDebounceCallback } from "usehooks-ts";
+import { HandleNewMessageType } from "@/lib/types";
 
 export default function ChattyApp() {
   const dispatch = useAppDispatch();
@@ -92,10 +94,9 @@ export default function ChattyApp() {
       dispatch(connectError("Socket disconnected"));
     });
 
-    // socket.on("receiveMessage", (msg) => {
-    //   console.log(msg);
-    //   dispatch(receiveMessage(msg));
-    // });
+    socket.on("receiveMessage", (payload: HandleNewMessageType) => {
+      dispatch(handleNewMessage(payload));
+    });
 
     return () => {
       console.log("removing event listeners");

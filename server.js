@@ -38,12 +38,6 @@ app.prepare().then(() => {
     global.io.on("connection", (socket) => {
       socket.join(socket.userId);
 
-      socket.on("sendMessage", (messageObj) => {
-        const timestamp = new Date().toISOString();
-        const msg = { ...messageObj, timestamp };
-        global.io.to(messageObj.recipientId).emit("receiveMessage", msg);
-      });
-
       socket.on("disconnect", () => {
         socket.leave(socket.userId);
       });

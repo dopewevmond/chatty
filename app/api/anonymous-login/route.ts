@@ -23,13 +23,11 @@ export async function POST() {
 
     if (tokenValue != null) {
       try {
-        const payload = jwt.verify(tokenValue, process.env.SECRET_KEY!) as {
-          id: string;
-          username: string;
-        };
+        const payload = jwt.verify(tokenValue, process.env.SECRET_KEY!) as jwt.JwtPayload & TokenPayloadType;
         return Response.json({
           id: payload.id,
           username: payload.username,
+          displayName: payload.displayName
         });
       } catch (e) {
         console.log(e);

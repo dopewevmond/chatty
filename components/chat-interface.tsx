@@ -1,21 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { Search, MessageSquare, Users, Loader2 } from "lucide-react";
+import { Search, MessageSquare, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar } from "@/components/ui/avatar";
 import { AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -40,6 +30,7 @@ import { io } from "socket.io-client";
 import { cn } from "@/lib/utils";
 import { useDebounceCallback } from "usehooks-ts";
 import { HandleNewMessageType } from "@/lib/types";
+import { UserDetailsDialogTrigger } from "./user-details-dialog";
 
 export default function ChattyApp() {
   const dispatch = useAppDispatch();
@@ -128,23 +119,7 @@ export default function ChattyApp() {
             </Tooltip>
           </TooltipProvider>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Users className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem>
-                Log out
-                <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <UserDetailsDialogTrigger />
         </div>
       </header>
       <div className="flex-1 flex h-full overflow-y-auto">

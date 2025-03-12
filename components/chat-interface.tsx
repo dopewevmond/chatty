@@ -18,34 +18,24 @@ import { anonymousLogin } from "@/redux/authSlice";
 import {
   closeChat,
   closeSearch,
-  connectError,
-  connectSocketSuccessfully,
-  getChatsWhileOffline,
-  getRecentChats,
-  handleNewMessage,
-  initializeSocket,
   openChat,
   searchUser,
 } from "@/redux/chatSlice";
-import { io } from "socket.io-client";
 import { cn } from "@/lib/utils";
 import { useDebounceCallback } from "usehooks-ts";
-import { HandleNewMessageType } from "@/lib/types";
 import { UserDetailsDialogTrigger } from "./user-details-dialog";
+import useSocket from "@/lib/useSocket";
 
 export default function ChattyApp() {
   const dispatch = useAppDispatch();
   const isLoggedIn = useAppSelector((state) => state.auth.isLoggedIn);
-  const hasInitializedSocket = useAppSelector(
-    (state) => state.chat.initializedSocket
-  );
-  const socket = useAppSelector((state) => state.chat.socket);
   const isOnline = useAppSelector((state) => state.chat.isOnline);
 
   const searchFunction = (query: string) =>
     query && dispatch(searchUser(query));
   const debouncedSearchUser = useDebounceCallback(searchFunction, 500);
   const isSearching = useAppSelector((state) => state.chat.isLoadingSearch);
+  const isLoadingChats = useAppSelector((state) => state.chat.isLoadingChats);
   const searchResults = useAppSelector((state) => state.chat.searchResults);
   const currentlyOpenedChat = useAppSelector((state) => state.chat.open);
   const recents = useAppSelector((state) => state.chat.recents);
@@ -55,57 +45,8 @@ export default function ChattyApp() {
       dispatch(anonymousLogin());
       return;
     }
-    if (!hasInitializedSocket) {
-      dispatch(initializeSocket(io()));
-      return;
-    }
-
-    if (!socket) return;
-    socket.on("connect", () => {
-      console.log("socket connected successfully");
-      dispatch(connectSocketSuccessfully());
-
-      const recentEntries = Object.entries(recents).toSorted(
-        (a, b) =>
-          new Date(b[1].timestamp).getTime() -
-          new Date(a[1].timestamp).getTime()
-      );
-
-      console.log(recentEntries?.[0]?.[1]?.timestamp);
-
-      if (recentEntries?.length === 0) {
-        dispatch(getRecentChats());
-      } else {
-        dispatch(
-          getChatsWhileOffline({ timestamp: recentEntries[0][1].timestamp })
-        );
-      }
-    });
-
-    socket.io.on("reconnect", () => {
-      console.log('reconnected');
-    });
-
-    socket.on("connect_error", (err) => {
-      console.log("socket disconnected");
-      dispatch(connectError(err.message));
-    });
-
-    socket.on("disconnect", () => {
-      console.log("socket disconnected");
-      dispatch(connectError("Socket disconnected"));
-    });
-
-    socket.on("receiveMessage", (payload: HandleNewMessageType) => {
-      dispatch(handleNewMessage(payload));
-    });
-
-    return () => {
-      console.log("removing event listeners");
-      socket.removeAllListeners();
-      console.log("finished removing event listeners");
-    };
-  }, [dispatch, isLoggedIn, hasInitializedSocket, socket, recents]);
+  }, [dispatch, isLoggedIn]);
+  useSocket(isLoggedIn);
 
   return (
     <div className="h-screen flex flex-col">
@@ -194,6 +135,9 @@ export default function ChattyApp() {
             </div>
           ) : (
             <ScrollArea className="flex-1 h-full overflow-y-auto">
+              {isLoadingChats && (
+                <Loader2 className="animate-spin block mx-auto my-4" />
+              )}
               {Object.entries(recents)
                 .toSorted(
                   (a, b) =>

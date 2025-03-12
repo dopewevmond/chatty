@@ -4,11 +4,8 @@ import {
   isAnyOf,
   PayloadAction,
 } from "@reduxjs/toolkit";
-import type { Socket } from "socket.io-client";
 import axios from "axios";
 import { HandleNewMessageType } from "@/lib/types";
-
-// @TODO - implement reducer for receiveMessage using sockets
 
 type Chat = {
   [recipientUserId: string]: {
@@ -38,8 +35,6 @@ type RecentsType = {
 };
 
 type ChatSlice = {
-  initializedSocket: boolean;
-  socket: Socket | null;
   error: string | null;
   isOnline: boolean;
   chats: Chat;
@@ -49,6 +44,7 @@ type ChatSlice = {
     displayName: string;
   } | null;
   isLoadingSearch: boolean;
+  isLoadingChats: boolean;
   searchResults:
     | {
         _id: string;
@@ -60,13 +56,12 @@ type ChatSlice = {
 };
 
 const initialState: ChatSlice = {
-  initializedSocket: false,
-  socket: null,
   error: null,
   isOnline: false,
   chats: {},
   open: null,
   isLoadingSearch: false,
+  isLoadingChats: true,
   searchResults: null,
   recents: {},
 };
@@ -79,18 +74,11 @@ export const chatSlice = createSlice({
       state.error = null;
       state.isOnline = true;
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    initializeSocket: (state, { payload }: PayloadAction<any>) => {
-      state.socket = payload;
-      state.initializedSocket = true;
-    },
     connectError: (state, { payload }: PayloadAction<string>) => {
       state.error = payload;
       state.isOnline = false;
     },
     removeSocket: (state) => {
-      state.socket = null;
-      state.initializedSocket = false;
       state.isOnline = false;
     },
     openChat: (
@@ -168,8 +156,21 @@ export const chatSlice = createSlice({
         state.searchResults = [...payload];
       })
       .addMatcher(
+        isAnyOf(getRecentChats.pending, getChatsWhileOffline.pending),
+        (state) => {
+          state.isLoadingChats = true;
+        }
+      )
+      .addMatcher(
+        isAnyOf(getRecentChats.rejected, getChatsWhileOffline.rejected),
+        (state) => {
+          state.isLoadingChats = false;
+        }
+      )
+      .addMatcher(
         isAnyOf(getRecentChats.fulfilled, getChatsWhileOffline.fulfilled),
         (state, { payload }) => {
+          state.isLoadingChats = false;
           payload.forEach((chat) => {
             state.recents[chat.otherUserDetails._id] = {
               ...chat.messages[0],
@@ -262,7 +263,6 @@ export const getChatsWhileOffline = createAsyncThunk(
 
 export const {
   connectSocketSuccessfully,
-  initializeSocket,
   removeSocket,
   connectError,
   openChat,

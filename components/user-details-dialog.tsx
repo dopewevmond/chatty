@@ -43,7 +43,8 @@ export function UserDetailsDialogTrigger() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" className="flex items-center gap-2">
+          <span className="capitalize text-xs">{displayName}</span>
           <Users className="h-5 w-5" />
         </Button>
       </DialogTrigger>
@@ -71,7 +72,9 @@ export function UserDetailsDialogTrigger() {
                 type="button"
                 size="sm"
                 className="px-3"
-                onClick={() => copyToClipboard(displayName ?? '', "displayName")}
+                onClick={() =>
+                  copyToClipboard(displayName ?? "", "displayName")
+                }
               >
                 {copiedDisplayName ? (
                   <Check className="h-4 w-4" />
@@ -100,7 +103,7 @@ export function UserDetailsDialogTrigger() {
                 type="button"
                 size="sm"
                 className="px-3"
-                onClick={() => copyToClipboard(username ?? '', "username")}
+                onClick={() => copyToClipboard(username ?? "", "username")}
               >
                 {copiedUsername ? (
                   <Check className="h-4 w-4" />

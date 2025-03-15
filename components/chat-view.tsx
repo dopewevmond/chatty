@@ -8,7 +8,11 @@ import { Avatar } from "@/components/ui/avatar";
 import { AvatarFallback } from "@/components/ui/avatar";
 import { useAppDispatch, useAppSelector } from "@/redux/store";
 import { FormEvent, useRef, useState } from "react";
-import { handleNewMessage, sendMessage } from "@/redux/chatSlice";
+import {
+  handleNewAIMessage,
+  handleNewMessage,
+  sendMessage,
+} from "@/redux/chatSlice";
 
 type Props = {
   recipientUserId: string;
@@ -32,6 +36,9 @@ export default function ChatView(props: Props) {
   const chatsForUser = useAppSelector((state) => state.chat.chats)[
     props.recipientUserId
   ];
+  const aiChats = useAppSelector((state) => state.chat.aiChat);
+  const isPrivateChat =
+    useAppSelector((state) => state.chat.open?.type) === "private-chat";
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     try {
@@ -49,23 +56,30 @@ export default function ChatView(props: Props) {
 
       await dispatch(
         sendMessage({
-          recipientId: props.recipientUserId,
+          recipientId: isPrivateChat ? props.recipientUserId : "ai-group",
           message,
         })
       );
 
+      if (isPrivateChat) {
+        dispatch(
+          handleNewMessage({
+            type: "send",
+            message,
+            senderId: currentlyLoggedInUserId!,
+            senderUserName: currentlyLoggedInUserUsername!,
+            senderDisplayName: currentlyLoggedInDisplayName!,
+            recipientId: props.recipientUserId,
+            timestamp: new Date().toISOString(),
+            recipientDisplayName: props.displayName,
+            recipientUserName: props.username,
+          })
+        );
+        return;
+      }
+
       dispatch(
-        handleNewMessage({
-          type: "send",
-          message,
-          senderId: currentlyLoggedInUserId!,
-          senderUserName: currentlyLoggedInUserUsername!,
-          senderDisplayName: currentlyLoggedInDisplayName!,
-          recipientId: props.recipientUserId,
-          timestamp: new Date().toISOString(),
-          recipientDisplayName: props.displayName,
-          recipientUserName: props.username,
-        })
+        handleNewAIMessage({ message, timestamp: new Date().toISOString() })
       );
     } catch (e) {
       console.log(e);
@@ -100,33 +114,51 @@ export default function ChatView(props: Props) {
               </span>
             </div>
           </div>
-          <Button variant="ghost" className="hidden md:inline-flex">
-            View profile
-          </Button>
         </header>
 
         <ScrollArea className="flex-1 h-full overflow-y-auto p-4">
           <div className="space-y-4">
-            {chatsForUser?.messages.map((chatMessage, idx) => (
-              <div
-                key={idx}
-                className={`flex ${
-                  chatMessage.senderId === props.recipientUserId
-                    ? "justify-start"
-                    : "justify-end"
-                } `}
-              >
+            {isPrivateChat &&
+              chatsForUser?.messages.map((chatMessage, idx) => (
                 <div
-                  className={`rounded-lg px-4 py-2 max-w-[70%] ${
+                  key={idx}
+                  className={`flex ${
                     chatMessage.senderId === props.recipientUserId
-                      ? "bg-muted"
-                      : "bg-primary text-primary-foreground"
-                  }`}
+                      ? "justify-start"
+                      : "justify-end"
+                  } `}
                 >
-                  {chatMessage.message}
+                  <div
+                    className={`rounded-lg px-4 py-2 max-w-[70%] ${
+                      chatMessage.senderId === props.recipientUserId
+                        ? "bg-muted"
+                        : "bg-primary text-primary-foreground"
+                    }`}
+                  >
+                    {chatMessage.message}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+
+            {!isPrivateChat &&
+              aiChats?.map((c) => (
+                <div
+                  key={c._id}
+                  className={`flex ${
+                    c.modelName != null ? "justify-start" : "justify-end"
+                  } `}
+                >
+                  <div
+                    className={`rounded-lg px-4 py-2 max-w-[70%] ${
+                      c.modelName != null
+                        ? "bg-muted"
+                        : "bg-primary text-primary-foreground"
+                    }`}
+                  >
+                    {c.message}
+                  </div>
+                </div>
+              ))}
 
             {isSending && (
               <div className="flex justify-end">

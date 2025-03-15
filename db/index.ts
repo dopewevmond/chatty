@@ -14,6 +14,7 @@ export const connectToDB = async () => {
       appName: "chatty",
     });
     await global.mongo.client.connect();
+    console.log('connected to db')
   }
 
   const db: Db = global.mongo.client.db("chatty");

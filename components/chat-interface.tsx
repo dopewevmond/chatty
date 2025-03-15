@@ -39,6 +39,11 @@ export default function ChattyApp() {
   const searchResults = useAppSelector((state) => state.chat.searchResults);
   const currentlyOpenedChat = useAppSelector((state) => state.chat.open);
   const recents = useAppSelector((state) => state.chat.recents);
+  const aiChat = useAppSelector((state) => state.chat.aiChat);
+  const recentAIMessage =
+    aiChat.length > 0
+      ? aiChat[aiChat.length - 1]
+      : { modelName: null, message: "Click to get started" };
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -108,7 +113,12 @@ export default function ChattyApp() {
                       key={searchResultUser._id}
                       className="flex rounded-md items-center gap-3 w-full p-4 hover:bg-muted text-left"
                       onClick={() =>
-                        dispatch(openChat({ ...searchResultUser }))
+                        dispatch(
+                          openChat({
+                            ...searchResultUser,
+                            type: "private-chat",
+                          })
+                        )
                       }
                     >
                       <Avatar>
@@ -135,8 +145,35 @@ export default function ChattyApp() {
             </div>
           ) : (
             <ScrollArea className="flex-1 h-full overflow-y-auto">
-              {isLoadingChats && (
+              {isLoadingChats ? (
                 <Loader2 className="animate-spin block mx-auto my-4" />
+              ) : (
+                <button
+                  className="flex items-center gap-3 w-full p-4 hover:bg-muted text-left"
+                  onClick={() =>
+                    dispatch(
+                      openChat({
+                        _id: "",
+                        displayName: "AI Chat",
+                        username: "ai_chat",
+                        type: "ai-group",
+                      })
+                    )
+                  }
+                >
+                  <Avatar>
+                    <AvatarFallback className="bg-primary text-white uppercase">
+                      AI
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="font-medium capitalize">Chat With AI</div>
+                    <div className="text-sm text-muted-foreground truncate">
+                      {recentAIMessage?.modelName == null ? "You: " : ""}{" "}
+                      {recentAIMessage?.message}
+                    </div>
+                  </div>
+                </button>
               )}
               {Object.entries(recents)
                 .toSorted(
@@ -154,6 +191,7 @@ export default function ChattyApp() {
                           _id: otherUserId,
                           displayName: val.otherUserDisplayName,
                           username: val.otherUserUserName,
+                          type: "private-chat",
                         })
                       )
                     }

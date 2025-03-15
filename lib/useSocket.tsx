@@ -1,6 +1,7 @@
 import {
   connectError,
   connectSocketSuccessfully,
+  getAIMessages,
   getChatsWhileOffline,
   getRecentChats,
   handleNewMessage,
@@ -36,6 +37,7 @@ export default function useSocket(enabled: boolean) {
 
       if (recentEntries?.length === 0) {
         dispatch(getRecentChats());
+        dispatch(getAIMessages());
       } else {
         dispatch(
           getChatsWhileOffline({ timestamp: recentEntries[0][1].timestamp })

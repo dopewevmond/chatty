@@ -5,6 +5,7 @@ import * as jwt from "jsonwebtoken";
 import { getRecentChatsGroupedByUser, saveMessage } from "@/db/Message";
 import { HandleNewMessageType, TokenPayloadType } from "@/lib/types";
 import { findUserById } from "@/db/User";
+import { saveAIMessage } from "@/db/AIMessage";
 
 export async function GET() {
   try {
@@ -44,7 +45,14 @@ export async function POST(req: Request) {
       TokenPayloadType;
 
     const { recipientId, message } = await req.json();
+
     const { db } = await connectToDB();
+
+    if (recipientId === "ai-group") {
+      await saveAIMessage(db, senderId, null, message);
+      return NextResponse.json({ success: true }, { status: 201 });
+    }
+
     await saveMessage(db, senderId, recipientId, message);
 
     const recipientDetails = await findUserById(db, recipientId);
@@ -66,7 +74,7 @@ export async function POST(req: Request) {
       recipientUserName,
     };
 
-    if (global.io) {
+    if (global.io && recipientId !== "ai-group") {
       global.io.to(recipientId).emit("receiveMessage", socketPayload);
     }
 

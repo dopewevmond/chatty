@@ -2,6 +2,7 @@ import {
   createAsyncThunk,
   createSlice,
   isAnyOf,
+  nanoid,
   PayloadAction,
 } from "@reduxjs/toolkit";
 import axios from "axios";
@@ -34,11 +35,20 @@ type RecentsType = {
   };
 };
 
+type ChatType = "private-chat" | "ai-group";
+
 type ChatSlice = {
   error: string | null;
   isOnline: boolean;
   chats: Chat;
+  aiChat: {
+    _id: string;
+    message: string;
+    timestamp: string;
+    modelName: string | null;
+  }[];
   open: {
+    type: ChatType;
     _id: string;
     username: string;
     displayName: string;
@@ -59,9 +69,10 @@ const initialState: ChatSlice = {
   error: null,
   isOnline: false,
   chats: {},
+  aiChat: [],
   open: null,
   isLoadingSearch: false,
-  isLoadingChats: true,
+  isLoadingChats: false,
   searchResults: null,
   recents: {},
 };
@@ -85,7 +96,12 @@ export const chatSlice = createSlice({
       state,
       {
         payload,
-      }: PayloadAction<{ _id: string; username: string; displayName: string }>
+      }: PayloadAction<{
+        _id: string;
+        username: string;
+        displayName: string;
+        type: ChatType;
+      }>
     ) => {
       state.open = { ...payload };
     },
@@ -142,6 +158,16 @@ export const chatSlice = createSlice({
         };
       }
     },
+    handleNewAIMessage: (
+      state,
+      { payload }: PayloadAction<{ message: string; timestamp: string }>
+    ) => {
+      state.aiChat.push({
+        ...payload,
+        modelName: null,
+        _id: nanoid(10),
+      });
+    },
   },
   extraReducers(builder) {
     builder
@@ -154,6 +180,12 @@ export const chatSlice = createSlice({
       .addCase(searchUser.fulfilled, (state, { payload }) => {
         state.isLoadingSearch = false;
         state.searchResults = [...payload];
+      })
+      .addCase(getAIMessages.fulfilled, (state, { payload }) => {
+        state.aiChat = payload.toSorted(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
       })
       .addMatcher(
         isAnyOf(getRecentChats.pending, getChatsWhileOffline.pending),
@@ -246,6 +278,22 @@ export const getRecentChats = createAsyncThunk(
   }
 );
 
+type AIMessage = {
+  _id: string;
+  userId: string;
+  modelName: string | null;
+  message: string;
+  timestamp: string;
+};
+
+export const getAIMessages = createAsyncThunk(
+  `${chatSlice.name}/get-ai-messages`,
+  async () => {
+    const { data } = await axios.get<AIMessage[]>("/api/chat/ai");
+    return data;
+  }
+);
+
 type GetOfflineChatRequestQueryType = {
   timestamp: string;
 };
@@ -269,6 +317,7 @@ export const {
   closeChat,
   closeSearch,
   handleNewMessage,
+  handleNewAIMessage,
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

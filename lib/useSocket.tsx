@@ -6,23 +6,29 @@ import {
   handleNewMessage,
 } from "@/redux/chatSlice";
 import { useAppDispatch, useAppSelector } from "@/redux/store";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { HandleNewMessageType } from "./types";
 import { socket } from "./socket-client";
 
 export default function useSocket(enabled: boolean) {
   const dispatch = useAppDispatch();
   const recents = useAppSelector((state) => state.chat.recents);
+  const recentsRef = useRef(recents);
+
+  useEffect(() => {
+    recentsRef.current = recents;
+  }, [recents]);
 
   useEffect(() => {
     if (!enabled) return;
+
     console.log("Socket should start connecting now...");
     socket.connect();
 
     socket.on("connect", () => {
       dispatch(connectSocketSuccessfully());
 
-      const recentEntries = Object.entries(recents).toSorted(
+      const recentEntries = Object.entries(recentsRef.current).toSorted(
         (a, b) =>
           new Date(b[1].timestamp).getTime() -
           new Date(a[1].timestamp).getTime()
@@ -57,5 +63,5 @@ export default function useSocket(enabled: boolean) {
       socket.removeAllListeners();
       socket.disconnect();
     };
-  }, [dispatch, enabled, recents]);
+  }, [dispatch, enabled]);
 }

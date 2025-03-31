@@ -8,11 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { AvatarFallback } from "@/components/ui/avatar";
 import { useAppDispatch, useAppSelector } from "@/redux/store";
 import { FormEvent, useRef, useState } from "react";
-import {
-  handleNewAIMessage,
-  handleNewMessage,
-  sendMessage,
-} from "@/redux/chatSlice";
+import { handleNewMessage, sendMessage } from "@/redux/chatSlice";
 
 type Props = {
   recipientUserId: string;
@@ -36,9 +32,6 @@ export default function ChatView(props: Props) {
   const chatsForUser = useAppSelector((state) => state.chat.chats)[
     props.recipientUserId
   ];
-  const aiChats = useAppSelector((state) => state.chat.aiChat);
-  const isPrivateChat =
-    useAppSelector((state) => state.chat.open?.type) === "private-chat";
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     try {
@@ -56,30 +49,23 @@ export default function ChatView(props: Props) {
 
       await dispatch(
         sendMessage({
-          recipientId: isPrivateChat ? props.recipientUserId : "ai-group",
+          recipientId: props.recipientUserId,
           message,
         })
       );
 
-      if (isPrivateChat) {
-        dispatch(
-          handleNewMessage({
-            type: "send",
-            message,
-            senderId: currentlyLoggedInUserId!,
-            senderUserName: currentlyLoggedInUserUsername!,
-            senderDisplayName: currentlyLoggedInDisplayName!,
-            recipientId: props.recipientUserId,
-            timestamp: new Date().toISOString(),
-            recipientDisplayName: props.displayName,
-            recipientUserName: props.username,
-          })
-        );
-        return;
-      }
-
       dispatch(
-        handleNewAIMessage({ message, timestamp: new Date().toISOString() })
+        handleNewMessage({
+          type: "send",
+          message,
+          senderId: currentlyLoggedInUserId!,
+          senderUserName: currentlyLoggedInUserUsername!,
+          senderDisplayName: currentlyLoggedInDisplayName!,
+          recipientId: props.recipientUserId,
+          timestamp: new Date().toISOString(),
+          recipientDisplayName: props.displayName,
+          recipientUserName: props.username,
+        })
       );
     } catch (e) {
       console.log(e);
@@ -118,47 +104,26 @@ export default function ChatView(props: Props) {
 
         <ScrollArea className="flex-1 h-full overflow-y-auto p-4">
           <div className="space-y-4">
-            {isPrivateChat &&
-              chatsForUser?.messages.map((chatMessage, idx) => (
+            {chatsForUser?.messages.map((chatMessage, idx) => (
+              <div
+                key={idx}
+                className={`flex ${
+                  chatMessage.senderId === props.recipientUserId
+                    ? "justify-start"
+                    : "justify-end"
+                } `}
+              >
                 <div
-                  key={idx}
-                  className={`flex ${
+                  className={`rounded-lg px-4 py-2 max-w-[70%] ${
                     chatMessage.senderId === props.recipientUserId
-                      ? "justify-start"
-                      : "justify-end"
-                  } `}
+                      ? "bg-muted"
+                      : "bg-primary text-primary-foreground"
+                  }`}
                 >
-                  <div
-                    className={`rounded-lg px-4 py-2 max-w-[70%] ${
-                      chatMessage.senderId === props.recipientUserId
-                        ? "bg-muted"
-                        : "bg-primary text-primary-foreground"
-                    }`}
-                  >
-                    {chatMessage.message}
-                  </div>
+                  {chatMessage.message}
                 </div>
-              ))}
-
-            {!isPrivateChat &&
-              aiChats?.map((c) => (
-                <div
-                  key={c._id}
-                  className={`flex ${
-                    c.modelName != null ? "justify-start" : "justify-end"
-                  } `}
-                >
-                  <div
-                    className={`rounded-lg px-4 py-2 max-w-[70%] ${
-                      c.modelName != null
-                        ? "bg-muted"
-                        : "bg-primary text-primary-foreground"
-                    }`}
-                  >
-                    {c.message}
-                  </div>
-                </div>
-              ))}
+              </div>
+            ))}
 
             {isSending && (
               <div className="flex justify-end">

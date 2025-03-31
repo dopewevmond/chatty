@@ -2,7 +2,7 @@ import { UserType } from "@/lib/types";
 import { ObjectId, type Db } from "mongodb";
 
 export const createUserCollection = async (db: Db) => {
-  await db.collection("user").createIndex({ username: 1 }, { unique: true });
+  await db.collection("users").createIndex({ username: 1 }, { unique: true });
 };
 
 export const createUser = async (
@@ -10,7 +10,7 @@ export const createUser = async (
   username: string,
   displayName: string
 ) => {
-  return db.collection("user").insertOne({
+  return db.collection("users").insertOne({
     _id: new ObjectId().toString() as unknown as ObjectId,
     username,
     displayName,
@@ -19,11 +19,11 @@ export const createUser = async (
 };
 
 export const findUserByUsername = async (db: Db, username: string) => {
-  return db.collection("user").findOne<UserType>({ username });
+  return db.collection("users").findOne<UserType>({ username });
 };
 
 export const findUserById = async (db: Db, _id: ObjectId) => {
-  return db.collection("user").findOne<UserType>({ _id });
+  return db.collection("users").findOne<UserType>({ _id });
 };
 
 export const searchUserByUsernameDisplayNameOrId = async (
@@ -40,18 +40,18 @@ export const searchUserByUsernameDisplayNameOrId = async (
 
   if (excludeUserId && ObjectId.isValid(excludeUserId)) {
     return db
-      .collection("user")
+      .collection("users")
       .find({
         $and: [
           { $or: conditions },
-          { _id: { $ne: new ObjectId(excludeUserId) } },
+          { _id: { $ne: excludeUserId as unknown as ObjectId } },
         ],
       })
       .toArray();
   }
 
   return db
-    .collection("user")
+    .collection("users")
     .find({
       $or: conditions,
     })

@@ -55,7 +55,7 @@ export const getRecentChatsGroupedByUser = async (db: Db, userId: string) => {
       },
       {
         $lookup: {
-          from: "user",
+          from: "users",
           localField: "otherUserId",
           foreignField: "_id",
           as: "otherUserDetails",
@@ -114,7 +114,7 @@ export const getChatsAfterTimestamp = async (
       },
       {
         $lookup: {
-          from: "user",
+          from: "users",
           localField: "_id.otherUserId",
           foreignField: "_id",
           as: "otherUserDetails",
